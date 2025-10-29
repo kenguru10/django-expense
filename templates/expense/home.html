@@ -1,0 +1,132 @@
+<!-- base template -->
+{% extends "base.html" %}
+<!-- load static files -->
+{% load static %}
+
+<!-- block section -->
+{% block content %}
+
+<!-- Balance Card -->
+<div class="mx-4 mt-4 bg-gradient-to-br from-green-100 to-green-200 rounded-3xl p-6 relative">
+    <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-700">Your Balance</span>
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                />
+            </svg>
+        </div>
+        <button>
+            <svg class="w-6 h-6 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                    d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"
+                />
+            </svg>
+        </button>
+    </div>
+    <h1 class="text-4xl font-bold text-gray-900 mb-6">$12,435.00</h1>
+
+    <div class="flex justify-between mb-6">
+        <div>
+            <p class="text-xs text-gray-600 mb-1">Account Number</p>
+            <p class="text-sm font-semibold text-gray-800">•••• •••• •••• 3424</p>
+        </div>
+        <div class="text-right">
+            <p class="text-xs text-gray-600 mb-1">Expired Date</p>
+            <p class="text-sm font-semibold text-gray-800">25/12/2029</p>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button class="flex-1 bg-green-900 text-white rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+            Send
+        </button>
+        <button class="flex-1 bg-green-400 text-green-900 rounded-full py-3 px-6 flex items-center justify-center gap-2 font-medium">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Request
+        </button>
+        <button class="bg-green-900 text-white rounded-full w-14 h-14 flex items-center justify-center">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M4 4h7v7H4V4zm0 9h7v7H4v-7zm9-9h7v7h-7V4zm0 9h7v7h-7v-7z" />
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- Overview Section -->
+<div class="mx-4 mt-6">
+    <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Overview</h2>
+        <button class="text-sm text-gray-600">Weekly</button>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <!-- Income Card -->
+        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4">
+            <div class="bg-green-900 w-10 h-10 rounded-full flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+            </div>
+            <p class="text-sm text-gray-600 mb-1">Income</p>
+            <p class="text-xl font-bold text-gray-900">+$4,092.00</p>
+        </div>
+
+        <!-- Spending Card -->
+        <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4">
+            <div class="bg-green-900 w-10 h-10 rounded-full flex items-center justify-center mb-3">
+                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+                </svg>
+            </div>
+            <p class="text-sm text-gray-600 mb-1">Spending</p>
+            <p class="text-xl font-bold text-gray-900">+$1,254.00</p>
+        </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 mb-20">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-gray-900">Overview Spending</h3>
+            <button class="text-xs text-gray-600">More Details</button>
+        </div>
+        <div class="flex items-center justify-center h-40">
+            <!-- Placeholder for chart -->
+            <svg class="w-32 h-32" viewBox="0 0 100 100">
+                <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#4ade80"
+                    stroke-width="8"
+                    stroke-dasharray="150 100"
+                    transform="rotate(-90 50 50)"
+                />
+                <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    fill="none"
+                    stroke="#fb923c"
+                    stroke-width="8"
+                    stroke-dasharray="100 150"
+                    stroke-dashoffset="-150"
+                    transform="rotate(-90 50 50)"
+                />
+            </svg>
+        </div>
+    </div>
+</div>
+<!-- end the block -->
+{% endblock %}

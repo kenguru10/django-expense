@@ -1,0 +1,71 @@
+<div 
+    x-data="{ active: 'home' }" 
+    class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 px-4 py-3"
+>
+    <div class="flex items-center justify-around">
+        <!-- Home -->
+        <button 
+            @click="active = 'home'" 
+            :class="active === 'home' ? 'text-green-900' : 'text-gray-400'" 
+            class="flex flex-col items-center gap-1"
+        >
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+            </svg>
+            <span :class="active === 'home' ? 'font-medium' : ''" class="text-xs">Home</span>
+        </button>
+        <!-- Analytic -->
+        <button 
+            @click="active = 'analytic'" 
+            :class="active === 'analytic' ? 'text-green-900' : 'text-gray-400'" 
+            class="flex flex-col items-center gap-1"
+        >
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
+            </svg>
+            <span :class="active === 'analytic' ? 'font-medium' : ''" class="text-xs">Analytic</span>
+        </button>
+        <!-- Scan -->
+        <button 
+            @click="active = 'scan'" 
+            class="flex flex-col items-center gap-1 -mt-6"
+        >
+            <div 
+                :class="active === 'scan' ? 'bg-green-900' : 'bg-gray-200'" 
+                class="w-14 h-14 rounded-full flex items-center justify-center mb-1"
+            >
+                <svg 
+                    :class="active === 'scan' ? 'text-white' : 'text-green-900'" 
+                    class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+            </div>
+            <span :class="active === 'scan' ? 'text-green-900 font-medium' : 'text-xs'" class="text-xs">Scan</span>
+        </button>
+        <!-- Card -->
+        <button 
+            @click="active = 'card'" 
+            :class="active === 'card' ? 'text-green-900' : 'text-gray-400'" 
+            class="flex flex-col items-center gap-1"
+        >
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                    d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"
+                />
+            </svg>
+            <span :class="active === 'card' ? 'font-medium' : ''" class="text-xs">Card</span>
+        </button>
+        <!-- Profile -->
+        <button 
+            @click="active = 'profile'" 
+            :class="active === 'profile' ? 'text-green-900' : 'text-gray-400'" 
+            class="flex flex-col items-center gap-1"
+        >
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+            </svg>
+            <span :class="active === 'profile' ? 'font-medium' : ''" class="text-xs">Profile</span>
+        </button>
+    </div>
+</div>

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hong Kong Expense</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="//unpkg.com/alpinejs" defer></script>
+</head>
+<body>
+    <div x-data="BaseProvider()" class="max-w-md mx-auto bg-white min-h-screen">
+        <!-- header component -->
+        {% include "components/header.html" %}
+        <!-- content block -->
+        {% block content %}
+        {% endblock %}
+        <!-- bottom navigation -->
+        {% include "components/bottom_navigation.html" %}
+    </div>
+
+    <script>
+        function BaseProvider() {
+            return {
+                active: 'home',
+            }
+        }
+    </script>
+</body>
+</html>

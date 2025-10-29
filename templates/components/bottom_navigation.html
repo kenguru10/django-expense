@@ -1,11 +1,11 @@
 <div 
-    x-data="{ active: 'home' }" 
+    x-data="{ active: window.active_page || 'home' }" 
     class="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-200 px-4 py-3"
 >
     <div class="flex items-center justify-around">
         <!-- Home -->
         <button 
-            @click="active = 'home'" 
+            @click="window.location.href = '{% url 'home' %}'" 
             :class="active === 'home' ? 'text-green-900' : 'text-gray-400'" 
             class="flex flex-col items-center gap-1"
         >
@@ -14,16 +14,16 @@
             </svg>
             <span :class="active === 'home' ? 'font-medium' : ''" class="text-xs">Home</span>
         </button>
-        <!-- Analytic -->
+        <!-- Family -->
         <button 
-            @click="active = 'analytic'" 
-            :class="active === 'analytic' ? 'text-green-900' : 'text-gray-400'" 
+            @click="window.location.href = '{% url 'family' %}'" 
+            :class="active === 'family' ? 'text-green-900' : 'text-gray-400'" 
             class="flex flex-col items-center gap-1"
         >
             <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" />
             </svg>
-            <span :class="active === 'analytic' ? 'font-medium' : ''" class="text-xs">Analytic</span>
+            <span :class="active === 'family' ? 'font-medium' : ''" class="text-xs">Family</span>
         </button>
         <!-- Scan -->
         <button 

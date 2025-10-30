@@ -39,7 +39,11 @@ CORS_ALLOW_HEADERS = [
     'origin',
     'user-agent',
 ]
-
+CSRF_TRUSTED_ORIGINS = [
+    '192.168.1.28',
+    'expense.kenguru10.space',
+    'expenses.kenguru10.space',
+]
 
 # Application definition
 

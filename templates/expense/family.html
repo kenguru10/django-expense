@@ -8,12 +8,9 @@
     <!-- Header Section -->
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold text-gray-900">My Families</h1>
-        <button 
-            @click="openCreateModal()"
-            class="bg-green-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-800 transition"
-        >
+        <button @click="openCreateModal()" class="bg-green-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-800 transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
             Add Family
         </button>
@@ -28,25 +25,31 @@
                     <div>
                         <h2 class="text-xl font-bold text-gray-900" x-text="family.name"></h2>
                         <p class="text-sm text-gray-600">
-                            Level <span x-text="family.level"></span> - 
-                            <span x-text="family.members.length"></span>/<span x-text="family.level === 1 ? 2 : 4"></span> Members
+                            Level <span x-text="family.level"></span> - <span x-text="family.members.length"></span>/<span
+                                x-text="family.level === 1 ? 2 : 4"
+                            ></span>
+                            Members
                         </p>
                     </div>
                     <div class="flex gap-2">
-                        <button 
-                            @click="openEditModal(family)"
-                            class="text-green-900 hover:text-green-700"
-                        >
+                        <button @click="openEditModal(family)" class="text-green-900 hover:text-green-700">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                                />
                             </svg>
                         </button>
-                        <button 
-                            @click="deleteFamily(family.id)"
-                            class="text-red-600 hover:text-red-700"
-                        >
+                        <button @click="deleteFamily(family.id)" class="text-red-600 hover:text-red-700">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
                             </svg>
                         </button>
                     </div>
@@ -62,7 +65,7 @@
                 <div class="mb-3">
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="text-sm font-semibold text-gray-900">Members</h3>
-                        <button 
+                        <button
                             @click="openAddMemberModal(family)"
                             :disabled="family.members.length >= (family.level === 1 ? 2 : 4)"
                             :class="family.members.length >= (family.level === 1 ? 2 : 4) ? 'opacity-50 cursor-not-allowed' : 'hover:text-green-700'"
@@ -84,12 +87,9 @@
                                         <p class="text-xs text-gray-600" x-text="member.email"></p>
                                     </div>
                                 </div>
-                                <button 
-                                    @click="removeMember(family.id, member.id)"
-                                    class="text-red-600 hover:text-red-700"
-                                >
+                                <button @click="removeMember(family.id, member.id)" class="text-red-600 hover:text-red-700">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </button>
                             </div>
@@ -107,45 +107,75 @@
         <!-- Empty State -->
         <div x-show="families.length === 0" class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-12 text-center">
             <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                />
             </svg>
             <h3 class="text-lg font-semibold text-gray-900 mb-2">No families yet</h3>
             <p class="text-sm text-gray-600 mb-4">Create your first family to get started</p>
-            <button 
-                @click="openCreateModal()"
-                class="bg-green-900 text-white px-6 py-2 rounded-xl hover:bg-green-800 transition"
-            >
+            <button @click="openCreateModal()" class="bg-green-900 text-white px-6 py-2 rounded-xl hover:bg-green-800 transition">
                 Create Family
             </button>
         </div>
     </div>
 
     <!-- Create/Edit Family Modal -->
-    <div 
-        x-show="showFamilyModal" 
+    <div
+        x-show="showFamilyModal"
         x-cloak
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
         @click.self="closeFamilyModal()"
     >
         <div class="bg-white rounded-2xl p-6 max-w-md w-full">
             <h2 class="text-xl font-bold text-gray-900 mb-4" x-text="editingFamily ? 'Edit Family' : 'Create Family'"></h2>
-            
+
             <form @submit.prevent="saveFamily()">
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Family Name</label>
-                    <input 
-                        type="text" 
+                    <input
+                        type="text"
                         x-model="familyForm.name"
                         placeholder="Enter family name"
                         class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition"
                         required
+                    />
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Max Budget</label>
+                    <input
+                        type="number"
+                        step="0.01"
+                        x-model="familyForm.max_budget"
+                        placeholder="Enter max budget"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition"
+                        required
+                    />
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Currency</label>
+                    <select
+                        x-model="familyForm.currency"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition"
                     >
+                        <option value="HKD">HKD</option>
+                        <option value="USD">USD</option>
+                        <option value="CNY">CNY</option>
+                        <option value="JPY">JPY</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                        <option value="AUD">AUD</option>
+                    </select>
                 </div>
 
                 <div class="mb-6">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Level</label>
                     <div class="grid grid-cols-2 gap-3">
-                        <button 
+                        <button
                             type="button"
                             @click="familyForm.level = 1"
                             :class="familyForm.level === 1 ? 'bg-green-900 text-white' : 'bg-gray-100 text-gray-700'"
@@ -153,7 +183,7 @@
                         >
                             Level 1 (2 slots)
                         </button>
-                        <button 
+                        <button
                             type="button"
                             @click="familyForm.level = 2"
                             :class="familyForm.level === 2 ? 'bg-green-900 text-white' : 'bg-gray-100 text-gray-700'"
@@ -166,17 +196,14 @@
                 </div>
 
                 <div class="flex gap-3">
-                    <button 
+                    <button
                         type="button"
                         @click="closeFamilyModal()"
                         class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
                     >
                         Cancel
                     </button>
-                    <button 
-                        type="submit"
-                        class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition"
-                    >
+                    <button type="submit" class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition">
                         <span x-text="editingFamily ? 'Update' : 'Create'"></span>
                     </button>
                 </div>
@@ -185,40 +212,37 @@
     </div>
 
     <!-- Add Member Modal -->
-    <div 
-        x-show="showMemberModal" 
+    <div
+        x-show="showMemberModal"
         x-cloak
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
         @click.self="closeMemberModal()"
     >
         <div class="bg-white rounded-2xl p-6 max-w-md w-full">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Add Member</h2>
-            
+
             <form @submit.prevent="addMember()">
                 <div class="mb-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Member Email</label>
-                    <input 
-                        type="email" 
+                    <input
+                        type="email"
                         x-model="memberForm.email"
                         placeholder="Enter member email"
                         class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition"
                         required
-                    >
+                    />
                     <p class="text-xs text-gray-500 mt-1">Enter the email of an existing user</p>
                 </div>
 
                 <div class="flex gap-3">
-                    <button 
+                    <button
                         type="button"
                         @click="closeMemberModal()"
                         class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition"
                     >
                         Cancel
                     </button>
-                    <button 
-                        type="submit"
-                        class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition"
-                    >
+                    <button type="submit" class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition">
                         Add
                     </button>
                 </div>
@@ -228,11 +252,28 @@
 </div>
 
 <style>
-    [x-cloak] { display: none !important; }
+    [x-cloak] {
+        display: none !important;
+    }
 </style>
 
 <script>
-    window.active_page = 'family';
+    window.active_page = "family";
+
+    // Build endpoints from Django routes
+    window.endpoints = {
+        list: "{% url 'family_collection_api' %}",
+        detail: (id) => "{% url 'family_detail_api' family_id=0 %}".replace("/0/", `/${id}/`),
+        addMember: (id) => "{% url 'family_add_member_api' family_id=0 %}".replace("/0/", `/${id}/`),
+        removeMember: (id, memberId) => "{% url 'family_remove_member_api' family_id=0 member_id=0 %}"
+            .replace("/0/members/0/", `/${id}/members/${memberId}/`),
+    };
+
+    // CSRF helper
+    function getCSRFToken() {
+        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : "";
+    }
 
     function FamilyProvider() {
         return {
@@ -242,38 +283,40 @@
             editingFamily: null,
             selectedFamily: null,
             familyForm: {
-                name: '',
-                level: 1
+                name: "",
+                level: 1,
+                max_budget: 10000,
+                currency: "HKD",
             },
             memberForm: {
-                email: ''
+                email: "",
             },
 
             init() {
                 this.loadFamilies();
             },
 
-            loadFamilies() {
-                // Mock data - replace with actual API call
-                this.families = [
-                    {
-                        id: 1,
-                        pid: 'FAM-001-ABC123',
-                        name: 'Smith Family',
-                        level: 1,
-                        members: [
-                            { id: 1, name: 'John Smith', email: 'john@example.com' },
-                            { id: 2, name: 'Jane Smith', email: 'jane@example.com' }
-                        ]
-                    },
-                ];
+            async loadFamilies() {
+                const res = await fetch(window.endpoints.list, {
+                    method: "GET",
+                    headers: { "Accept": "application/json" },
+                    credentials: "same-origin",
+                });
+                if (!res.ok) {
+                    alert("Failed to load families.");
+                    return;
+                }
+                const data = await res.json();
+                this.families = data.families || [];
             },
 
             openCreateModal() {
                 this.editingFamily = null;
                 this.familyForm = {
-                    name: '',
-                    level: 1
+                    name: "",
+                    level: 1,
+                    max_budget: 10000,
+                    currency: "HKD",
                 };
                 this.showFamilyModal = true;
             },
@@ -282,7 +325,9 @@
                 this.editingFamily = family;
                 this.familyForm = {
                     name: family.name,
-                    level: family.level
+                    level: family.level,
+                    max_budget: family.max_budget,
+                    currency: family.currency,
                 };
                 this.showFamilyModal = true;
             },
@@ -292,37 +337,54 @@
                 this.editingFamily = null;
             },
 
-            saveFamily() {
-                if (this.editingFamily) {
-                    // Update existing family
-                    this.editingFamily.name = this.familyForm.name;
-                    this.editingFamily.level = this.familyForm.level;
-                    // TODO: Make API call to update family
-                } else {
-                    // Create new family
-                    const newFamily = {
-                        id: this.families.length + 1,
-                        pid: `FAM-${String(this.families.length + 1).padStart(3, '0')}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+            async saveFamily() {
+                const isEdit = !!this.editingFamily;
+                const url = isEdit ? window.endpoints.detail(this.editingFamily.id) : window.endpoints.list;
+                const method = isEdit ? "PUT" : "POST";
+
+                const res = await fetch(url, {
+                    method,
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRFToken": getCSRFToken(),
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({
                         name: this.familyForm.name,
                         level: this.familyForm.level,
-                        members: []
-                    };
-                    this.families.push(newFamily);
-                    // TODO: Make API call to create family
+                        max_budget: this.familyForm.max_budget,
+                        currency: this.familyForm.currency,
+                    }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || "Failed to save family.");
+                    return;
+                }
+
+                const updated = await res.json();
+                if (isEdit) {
+                    // Replace the item in-place
+                    const idx = this.families.findIndex(f => f.id === updated.id);
+                    if (idx >= 0) this.families.splice(idx, 1, updated);
+                } else {
+                    this.families.push(updated);
                 }
                 this.closeFamilyModal();
             },
 
+            // Optional: local-only deletion until backend delete is implemented
             deleteFamily(familyId) {
-                if (confirm('Are you sure you want to delete this family?')) {
-                    this.families = this.families.filter(f => f.id !== familyId);
-                    // TODO: Make API call to delete family
+                if (confirm("Are you sure you want to delete this family?")) {
+                    this.families = this.families.filter((f) => f.id !== familyId);
                 }
             },
 
             openAddMemberModal(family) {
                 this.selectedFamily = family;
-                this.memberForm = { email: '' };
+                this.memberForm = { email: "" };
                 this.showMemberModal = true;
             },
 
@@ -331,36 +393,57 @@
                 this.selectedFamily = null;
             },
 
-            addMember() {
-                if (this.selectedFamily) {
-                    const maxMembers = this.selectedFamily.level === 1 ? 2 : 4;
-                    if (this.selectedFamily.members.length >= maxMembers) {
-                        alert(`Cannot add more members. Level ${this.selectedFamily.level} allows only ${maxMembers} members.`);
-                        return;
-                    }
+            async addMember() {
+                if (!this.selectedFamily) return;
 
-                    // Mock adding member - replace with actual API call
-                    const newMember = {
-                        id: Date.now(),
-                        name: this.memberForm.email.split('@')[0],
-                        email: this.memberForm.email
-                    };
-                    this.selectedFamily.members.push(newMember);
-                    // TODO: Make API call to add member
-                    
-                    this.closeMemberModal();
+                const res = await fetch(window.endpoints.addMember(this.selectedFamily.id), {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                        "X-CSRFToken": getCSRFToken(),
+                    },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ email: this.memberForm.email }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || "Failed to add member.");
+                    return;
                 }
+
+                const updated = await res.json();
+                // Update the selected family and the list
+                this.selectedFamily.members = updated.members;
+                const idx = this.families.findIndex(f => f.id === updated.id);
+                if (idx >= 0) this.families.splice(idx, 1, updated);
+
+                this.closeMemberModal();
             },
 
-            removeMember(familyId, memberId) {
-                if (confirm('Are you sure you want to remove this member?')) {
-                    const family = this.families.find(f => f.id === familyId);
-                    if (family) {
-                        family.members = family.members.filter(m => m.id !== memberId);
-                        // TODO: Make API call to remove member
-                    }
+            async removeMember(familyId, memberId) {
+                if (!confirm("Are you sure you want to remove this member?")) return;
+
+                const res = await fetch(window.endpoints.removeMember(familyId, memberId), {
+                    method: "DELETE",
+                    headers: {
+                        "Accept": "application/json",
+                        "X-CSRFToken": getCSRFToken(),
+                    },
+                    credentials: "same-origin",
+                });
+
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    alert(err.detail || "Failed to remove member.");
+                    return;
                 }
-            }
+
+                const updated = await res.json();
+                const idx = this.families.findIndex(f => f.id === updated.id);
+                if (idx >= 0) this.families.splice(idx, 1, updated);
+            },
         };
     }
 </script>

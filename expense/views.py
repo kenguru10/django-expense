@@ -1,44 +1,486 @@
+from datetime import datetime, timedelta
+import uuid
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from django.contrib import messages
+from django.db import transaction
+from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse, HttpResponseBadRequest
+import json
+import base64
+import re
+from PIL import Image
+import io
+
+from .models import Account, Family, Record
+
+
+def _serialize_member(user):
+    return {
+        "name": f"{user.first_name or ''}".strip() or (user.username or user.email),
+        "email": user.email or user.username,
+    }
+
+def _serialize_family(family: Family):
+    return {
+        "id": family.id,  # add id
+        "pid": family.pid,
+        "name": family.name,
+        "level": family.level,
+        "max_budget": family.max_budget,
+        "currency": family.currency,
+        "members": [_serialize_member(u) for u in family.members.all()],
+    }
+    
+def _serialize_account(account: Account):
+    return {
+        "pid": account.pid,
+        "user": _serialize_member(account.user),
+        "expired_at": account.expired_at,
+        "created_at": account.created_at,
+        "updated_at": account.updated_at,
+    }
+    
+
+def _serialize_record(record: Record):
+    return {
+        "pid": record.pid,
+        "family": _serialize_family(record.family),
+        "name": record.name,
+        "amount": record.amount,
+        "category": record.category,
+        "description": record.description,
+        "who": _serialize_member(record.who),
+    }
+
+def get_or_create_account(user: User) -> Account:
+    account = Account.objects.filter(user=user).first()
+    
+    with transaction.atomic():
+        if not account:
+            account = Account.objects.create(
+                user=user,
+                expired_at=datetime.now() + timedelta(days=365)
+            )
+        account.refresh_from_db()
+        
+    return account
 
 # Create your views here.
-@login_required(login_url=reverse_lazy('auth'))
+@login_required(login_url=reverse_lazy("auth"))
 def home_view(request):
-    return render(request, 'expense/home.html')
+    account = get_or_create_account(user=request.user)
+    family = Family.objects.prefetch_related("members").get(members=request.user)
+    
+    summary = {
+        "total_amount_this_month": 0,
+    }
+    records = Record.objects.filter(family=family, created_at__month=datetime.now().month)
+    for record in records:
+        summary["total_amount_this_month"] += record.amount
+        
+    return render(request, "expense/home.html", {"family": _serialize_family(family), "account": _serialize_account(account), "summary": summary})
 
 def auth_view(request):
-    tab = 'login'
-    if request.method == 'POST':
-        if 'login' in request.POST:
-            tab = 'login'
-            username = request.POST.get('username')
-            password = request.POST.get('password')
-            print(username, password)
+    tab = "login"
+    if request.method == "POST":
+        if "login" in request.POST:
+            tab = "login"
+            username = request.POST.get("username")
+            password = request.POST.get("password")
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
-                return redirect('home')
+                return redirect("home")
             else:
-                messages.error(request, 'Invalid username or password.')
-        elif 'register' in request.POST:
-            tab = 'register'
-            name = request.POST.get('name')
-            email = request.POST.get('email')
-            password = request.POST.get('password')
-            confirm = request.POST.get('confirm')
+                messages.error(request, "Invalid username or password.")
+        elif "register" in request.POST:
+            tab = "register"
+            name = request.POST.get("name")
+            email = request.POST.get("email")
+            password = request.POST.get("password")
+            confirm = request.POST.get("confirm")
             if password != confirm:
-                messages.error(request, 'Passwords do not match.')
+                messages.error(request, "Passwords do not match.")
             elif User.objects.filter(username=email).exists():
-                messages.error(request, 'Email already registered.')
+                messages.error(request, "Email already registered.")
             else:
-                user = User.objects.create_user(username=email, email=email, password=password, first_name=name)
+                user = User.objects.create_user(
+                    username=email, email=email, password=password, first_name=name
+                )
                 login(request, user)
-                return redirect('home')
-    return render(request, 'auths/auths.html', {'tab': tab})
+                return redirect("home")
+    return render(request, "auths/auths.html", {"tab": tab})
+
 
 def family_view(request):
-    return render(request, 'expense/family.html')
+    return render(request, "expense/family.html")
+
+def add_view(request):
+    return render(request, "expense/add.html")
+
+def records_view(request):
+    return render(request, "expense/records.html")
+
+
+# API endpoints
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["GET", "POST"])
+def family_collection_api(request):
+    # GET: list families current user belongs to
+    if request.method == "GET":
+        families = (
+            Family.objects.filter(members=request.user)
+            .prefetch_related("members")
+            .order_by("-created_at")
+        )
+        data = [_serialize_family(f) for f in families]
+        return JsonResponse({"families": data}, status=200)
+
+    # POST: create a new family; current user auto-joined as a member
+    # Accept JSON or form-encoded
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body or "{}")
+        else:
+            payload = request.POST
+        name = (payload.get("name") or "").strip()
+        level = int(payload.get("level") or 1)
+        max_budget = float(payload.get("max_budget") or 0)
+        currency = (payload.get("currency") or "HKD").strip() or "HKD"
+    except (ValueError, json.JSONDecodeError):
+        return HttpResponseBadRequest("Invalid request payload.")
+
+    if not name:
+        return HttpResponseBadRequest("Field 'name' is required.")
+
+    with transaction.atomic():
+        family = Family.objects.create(
+            name=name,
+            level=level,
+            max_budget=max_budget,
+            currency=currency,
+        )
+        family.members.add(request.user)
+
+    return JsonResponse(_serialize_family(family), status=201)
+
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["GET", "POST", "PUT"])
+def family_detail_api(request, family_id: int):
+    try:
+        family = Family.objects.prefetch_related("members").get(
+            id=family_id, members=request.user
+        )
+    except Family.DoesNotExist:
+        return JsonResponse(
+            {"detail": "Family not found or access denied."}, status=404
+        )
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_family(family), status=200)
+
+    # POST/PUT: update allowed fields
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body or "{}")
+        else:
+            payload = request.POST
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON payload.")
+
+    name = payload.get("name", None)
+    level = payload.get("level", None)
+    max_budget = payload.get("max_budget", None)
+    currency = payload.get("currency", None)
+
+    changed = False
+    if name is not None:
+        name = name.strip()
+        if not name:
+            return HttpResponseBadRequest("Field 'name' cannot be empty.")
+        family.name = name
+        changed = True
+    if level is not None:
+        try:
+            family.level = int(level)
+            changed = True
+        except ValueError:
+            return HttpResponseBadRequest("Field 'level' must be an integer.")
+    if max_budget is not None:
+        try:
+            family.max_budget = float(max_budget)
+            changed = True
+        except ValueError:
+            return HttpResponseBadRequest("Field 'max_budget' must be a number.")
+    if currency is not None:
+        currency = currency.strip()
+        if not currency:
+            return HttpResponseBadRequest("Field 'currency' cannot be empty.")
+        family.currency = currency
+        changed = True
+
+    if changed:
+        family.save()
+
+    return JsonResponse(_serialize_family(family), status=200)
+
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["POST"])
+def family_add_member_api(request, family_id: int):
+    # Body: { "email": "user@example.com" }
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body or "{}")
+        else:
+            payload = request.POST
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON payload.")
+
+    email = (payload.get("email") or "").strip()
+    if not email:
+        return HttpResponseBadRequest("Field 'email' is required.")
+
+    try:
+        family = Family.objects.prefetch_related("members").get(
+            id=family_id, members=request.user
+        )
+    except Family.DoesNotExist:
+        return JsonResponse(
+            {"detail": "Family not found or access denied."}, status=404
+        )
+
+    try:
+        target_user = User.objects.get(email=email)  # only existing users can be added
+    except User.DoesNotExist:
+        return JsonResponse(
+            {"detail": "User with this email does not exist."}, status=404
+        )
+
+    ok, err = family.add_member(target_user)
+    if not ok:
+        return JsonResponse({"detail": err}, status=400)
+
+    family.refresh_from_db()
+    return JsonResponse(_serialize_family(family), status=201)
+
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["POST", "DELETE"])
+def family_remove_member_api(request, family_id: int, member_id: int):
+    try:
+        family = Family.objects.prefetch_related("members").get(
+            id=family_id, members=request.user
+        )
+    except Family.DoesNotExist:
+        return JsonResponse(
+            {"detail": "Family not found or access denied."}, status=404
+        )
+
+    try:
+        target_user = User.objects.get(id=member_id)
+    except User.DoesNotExist:
+        return JsonResponse({"detail": "User not found."}, status=404)
+
+    ok, err = family.remove_member(target_user)
+    if not ok:
+        return JsonResponse({"detail": err}, status=400)
+
+    family.refresh_from_db()
+    return JsonResponse(_serialize_family(family), status=200)
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["GET", "POST"])
+def record_collection_api(request):
+    # Body: { "family_id": family_id, "amount": amount, "category": category, "description": description }
+
+    if request.method == "GET":
+        records = (
+            Record.objects.filter(family__members=request.user)
+            .select_related("family") 
+            .order_by("-created_at")
+        )
+        data = [_serialize_record(r) for r in records]
+        return JsonResponse({"records": data}, status=200)
+    
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body or "{}")
+        else:
+            payload = request.POST
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON payload.")
+    
+    family_id = payload.get("family_id", None)
+    name = payload.get("name", None)
+    amount = payload.get("amount", None)
+    category = payload.get("category", None)
+    description = payload.get("description", None)
+    if not family_id:
+        return HttpResponseBadRequest("Field 'family_id' is required.")
+    if not name:
+        return HttpResponseBadRequest("Field 'name' is required.")
+    if not amount:
+        return HttpResponseBadRequest("Field 'amount' is required.")
+    if not category:
+        return HttpResponseBadRequest("Field 'category' is required.")
+    
+    try:
+        with transaction.atomic():
+            record = Record.objects.create(
+                family=Family.objects.get(id=family_id),
+                name=name,
+                amount=amount,
+                category=category,
+                description=description,
+                who=request.user,
+            )
+        return JsonResponse(_serialize_record(record), status=201)
+    except Exception as e:
+        return JsonResponse({"detail": str(e)}, status=400)
+
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["POST"])
+def record_scan_api(request):
+    """
+    Receives a base64 image, performs OCR, and returns parsed receipt data
+    Body: { "image": "data:image/jpeg;base64,..." }
+    """
+    try:
+        if request.content_type and "application/json" in request.content_type:
+            payload = json.loads(request.body or "{}")
+        else:
+            payload = request.POST
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON payload.")
+    
+    image_data_url = payload.get("image", "").strip()
+    if not image_data_url:
+        return HttpResponseBadRequest("Field 'image' is required.")
+    
+    # Extract base64 data
+    try:
+        # Remove data URL prefix if present
+        if image_data_url.startswith("data:image"):
+            header, base64_data = image_data_url.split(",", 1)
+        else:
+            base64_data = image_data_url
+        
+        # Decode base64 to image
+        image_bytes = base64.b64decode(base64_data)
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert to RGB if necessary (for JPEG compatibility)
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+        
+        # Resize if too large (OCR works better with reasonable sizes)
+        max_size = 2000
+        if image.width > max_size or image.height > max_size:
+            ratio = min(max_size / image.width, max_size / image.height)
+            new_size = (int(image.width * ratio), int(image.height * ratio))
+            image = image.resize(new_size, Image.Resampling.LANCZOS)
+        
+    except Exception as e:
+        return JsonResponse({"detail": f"Invalid image data: {str(e)}"}, status=400)
+    
+    # Perform OCR
+    try:
+        import pytesseract
+        
+        # Extract text from image
+        text = pytesseract.image_to_string(image)
+        
+        # Try to extract total amount
+        amount = extract_total_from_text(text)
+        
+        # Try to infer category from text (basic keyword matching)
+        category = infer_category_from_text(text)
+        
+        # Use first few lines as description
+        lines = text.strip().split("\n")
+        description = "\n".join(lines[:3])
+        
+        return JsonResponse({
+            "amount": amount,
+            "category": category,
+            "description": description,
+            "raw_text": text  # Include for debugging
+        }, status=200)
+        
+    except ImportError:
+        return JsonResponse({
+            "detail": "OCR library (pytesseract) not installed. Please install it or provide fallback."
+        }, status=503)
+    except Exception as e:
+        return JsonResponse({
+            "detail": f"OCR processing failed: {str(e)}",
+            "amount": None,
+            "category": None,
+            "description": None
+        }, status=500)
+
+
+def extract_total_from_text(text: str) -> float:
+    """
+    Extract total amount from OCR text by looking for common patterns
+    """
+    # Common patterns for total amount
+    patterns = [
+        r'total[:\s]+([0-9]+\.?[0-9]*)',
+        r'grand[:\s]+total[:\s]+([0-9]+\.?[0-9]*)',
+        r'amount[:\s]+due[:\s]+([0-9]+\.?[0-9]*)',
+        r'balance[:\s]+([0-9]+\.?[0-9]*)',
+        r'\$([0-9]+\.?[0-9]*)\s*$',  # Dollar amount at end of line
+    ]
+    
+    lines = text.split("\n")
+    
+    # Search from bottom to top (total usually at bottom)
+    for line in reversed(lines):
+        for pattern in patterns:
+            match = re.search(pattern, line.lower())
+            if match:
+                try:
+                    return float(match.group(1))
+                except ValueError:
+                    continue
+    
+    # Fallback: look for any large number (likely total)
+    numbers = re.findall(r'([0-9]+\.[0-9]{2})', text)
+    if numbers:
+        try:
+            return max(float(n) for n in numbers)
+        except (ValueError, ValueError):
+            pass
+    
+    return 0.0
+
+
+def infer_category_from_text(text: str) -> str:
+    """
+    Try to infer expense category from text keywords
+    """
+    text_lower = text.lower()
+    
+    category_keywords = {
+        "food": ["restaurant", "food", "mcdonald", "kfc", "burger", "pizza", "cafe", "dining", "meal"],
+        "transport": ["taxi", "uber", "metro", "bus", "train", "subway", "parking", "fuel"],
+        "shopping": ["store", "market", "shopping", "retail", "supermarket"],
+        "health": ["pharmacy", "drug", "medicine", "hospital", "clinic"],
+        "utilities": ["electric", "water", "gas", "internet", "phone"],
+        "entertainment": ["cinema", "movie", "theater", "entertainment"],
+    }
+    
+    for category, keywords in category_keywords.items():
+        if any(keyword in text_lower for keyword in keywords):
+            return category
+    
+    return "other"

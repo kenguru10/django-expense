@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-+chb$uzoxpaa2gdp5h6m8z0*7-q^hg&_9-rqpksj25eqvv^3u4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "expense.kenguru10.space", '192.168.1.28']
+ALLOWED_HOSTS = ["localhost", "expense.kenguru10.space", '192.168.1.28', 'expenses.kenguru10.space']
 
 
 # Application definition

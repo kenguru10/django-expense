@@ -28,6 +28,18 @@ DEBUG = True
 
 ALLOWED_HOSTS = ["localhost", "expense.kenguru10.space", '192.168.1.28', 'expenses.kenguru10.space']
 
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+]
+
 
 # Application definition
 

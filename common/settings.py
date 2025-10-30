@@ -26,22 +26,25 @@ SECRET_KEY = "django-insecure-+chb$uzoxpaa2gdp5h6m8z0*7-q^hg&_9-rqpksj25eqvv^3u4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "expense.kenguru10.space", '192.168.1.28', 'expenses.kenguru10.space']
+ALLOWED_HOSTS = [
+    "localhost",
+    "expense.kenguru10.space",
+    "192.168.1.28",
+    "expenses.kenguru10.space",
+]
 
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
 ]
-CSRF_TRUSTED_ORIGINS = [
-    'https://expenses.kenguru10.space',
-]
+CSRF_TRUSTED_ORIGINS = ["https://expenses.kenguru10.space", "http://localhost:8000"]
 
 # Application definition
 
@@ -89,13 +92,13 @@ WSGI_APPLICATION = "common.wsgi.application"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'django-expense'),
-        'USER': os.getenv('POSTGRES_USER', 'root'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'root'),
-        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
-        'PORT': os.getenv('DATABASE_PORT', '8001'),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB", "django-expense"),
+        "USER": os.getenv("POSTGRES_USER", "root"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD", "root"),
+        "HOST": os.getenv("DATABASE_HOST", "localhost"),
+        "PORT": os.getenv("DATABASE_PORT", "8006"),
     }
 }
 

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import uuid
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.urls import reverse_lazy
 from django.contrib import messages
@@ -19,42 +19,54 @@ from .models import Account, Family, Record
 
 
 def _serialize_member(user):
-    return {
-        "name": f"{user.first_name or ''}".strip() or (user.username or user.email),
-        "email": user.email or user.username,
-    }
+    try:
+        return {
+            "name": f"{getattr(user, 'first_name', '')}".strip() or (getattr(user, 'username', None) or getattr(user, 'email', None)),
+            "email": getattr(user, 'email', None) or getattr(user, 'username', None),
+        }
+    except Exception as e:
+        return {"error": f"Failed to serialize member: {str(e)}"}
 
 def _serialize_family(family: Family):
-    return {
-        "id": family.id,  # add id
-        "pid": family.pid,
-        "name": family.name,
-        "level": family.level,
-        "max_budget": family.max_budget,
-        "currency": family.currency,
-        "members": [_serialize_member(u) for u in family.members.all()],
-    }
+    try:
+        return {
+            "id": getattr(family, 'id', None),
+            "pid": getattr(family, 'pid', None),
+            "name": getattr(family, 'name', None),
+            "level": getattr(family, 'level', None),
+            "max_budget": getattr(family, 'max_budget', None),
+            "currency": getattr(family, 'currency', None),
+            "members": [_serialize_member(u) for u in getattr(family, 'members', []).all()] if hasattr(getattr(family, 'members', None), 'all') else [],
+        }
+    except Exception as e:
+        return {"error": f"Failed to serialize family: {str(e)}"}
     
 def _serialize_account(account: Account):
-    return {
-        "pid": account.pid,
-        "user": _serialize_member(account.user),
-        "expired_at": account.expired_at,
-        "created_at": account.created_at,
-        "updated_at": account.updated_at,
-    }
+    try:
+        return {
+            "pid": getattr(account, 'pid', None),
+            "user": _serialize_member(getattr(account, 'user', None)),
+            "expired_at": getattr(account, 'expired_at', None),
+            "created_at": getattr(account, 'created_at', None),
+            "updated_at": getattr(account, 'updated_at', None),
+        }
+    except Exception as e:
+        return {"error": f"Failed to serialize account: {str(e)}"}
     
 
 def _serialize_record(record: Record):
-    return {
-        "pid": record.pid,
-        "family": _serialize_family(record.family),
-        "name": record.name,
-        "amount": record.amount,
-        "category": record.category,
-        "description": record.description,
-        "who": _serialize_member(record.who),
-    }
+    try:
+        return {
+            "pid": getattr(record, 'pid', None),
+            "family": _serialize_family(getattr(record, 'family', None)),
+            "name": getattr(record, 'name', None),
+            "amount": getattr(record, 'amount', None),
+            "category": getattr(record, 'category', None),
+            "description": getattr(record, 'description', None),
+            "who": _serialize_member(getattr(record, 'who', None)),
+        }
+    except Exception as e:
+        return {"error": f"Failed to serialize record: {str(e)}"}
 
 def get_or_create_account(user: User) -> Account:
     account = Account.objects.filter(user=user).first()
@@ -73,8 +85,11 @@ def get_or_create_account(user: User) -> Account:
 @login_required(login_url=reverse_lazy("auth"))
 def home_view(request):
     account = get_or_create_account(user=request.user)
-    family = Family.objects.prefetch_related("members").get(members=request.user)
-    
+    try:
+        family = Family.objects.prefetch_related("members").get(members=request.user)
+    except Family.DoesNotExist:
+        family = None
+
     summary = {
         "total_amount_this_month": 0,
     }
@@ -125,6 +140,12 @@ def add_view(request):
 def records_view(request):
     return render(request, "expense/records.html")
 
+def profile_view(request):
+    return render(request, "expense/profile.html")
+
+def logout_view(request):
+    logout(request)
+    return redirect("auth")
 
 # API endpoints
 

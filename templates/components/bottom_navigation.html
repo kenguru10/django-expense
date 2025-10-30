@@ -58,7 +58,7 @@
         </button>
         <!-- Profile -->
         <button
-            @click="active = 'profile'"
+            @click="window.location.href = '{% url 'profile' %}'"
             :class="active === 'profile' ? 'text-green-900' : 'text-gray-400'"
             class="flex flex-col items-center gap-1"
         >

@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+<!-- static -->
+{% load static %}
+<!-- content block -->
+{% block content %}
+
+<div x-data="ProfileProvider()" x-init="init()" class="mx-4 mt-6 mb-24">
+    <!-- Header -->
+    <div class="flex flex-col items-start md:items-center justify-between mb-6 gap-4">
+        <div class="flex items-center gap-4">
+            <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-3xl font-bold text-green-900">
+                <span x-text="userInitials"></span>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900" x-text="user.name || 'Your Name'"></h1>
+                <p class="text-sm text-gray-600" x-text="user.email || 'you@example.com'"></p>
+            </div>
+        </div>
+
+        <div class="flex flex-col items-center gap-4 mt-4 md:mt-0">
+            <div class="text-right">
+                <p class="text-xs text-gray-500">Total spent</p>
+                <p class="text-xl font-bold text-green-900" x-text="formatAmount(totalSpent, defaultCurrency)"></p>
+            </div>
+            <button
+                @click="openEdit()"
+                class="px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+                Edit Profile
+            </button>
+            <button
+                @click="logout()"
+                class="px-4 py-2 cursor-pointer bg-white border border-gray-200 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50"
+            >
+                Logout
+            </button>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6">
+        <!-- Left: Summary & Families -->
+        <div class="space-y-4">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-5">
+                <h3 class="text-sm font-semibold text-gray-700 mb-2">Summary</h3>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-gray-500">Records</p>
+                        <p class="text-lg font-bold text-gray-900" x-text="records.length"></p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Families</p>
+                        <p class="text-lg font-bold text-gray-900" x-text="families.length"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 border border-gray-100">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Families</h3>
+                <template x-if="families.length === 0">
+                    <p class="text-sm text-gray-500">No families yet</p>
+                </template>
+                <template x-for="f in families" :key="f.pid">
+                    <div class="flex items-center justify-between py-2">
+                        <div>
+                            <p class="text-sm font-medium text-gray-800" x-text="f.name"></p>
+                            <p class="text-xs text-gray-500" x-text="f.description || f.pid"></p>
+                        </div>
+                        <div class="text-sm font-semibold text-gray-700" x-text="f.currency || 'HKD'"></div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Middle: Recent Records -->
+        <div class="space-y-4">
+            <div class="bg-white rounded-2xl p-5 border border-gray-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">Recent records</h3>
+                    <a href="" class="text-sm text-green-900 hover:underline">View all</a>
+                </div>
+
+                <template x-if="loading">
+                    <p class="text-sm text-gray-500">Loading...</p>
+                </template>
+
+                <template x-if="!loading && recent.length === 0">
+                    <p class="text-sm text-gray-500">No recent activity</p>
+                </template>
+
+                <template x-for="rec in recent" :key="rec._key">
+                    <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 mb-3">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <p class="text-sm text-gray-600" x-text="rec.family?.name || 'Family'"></p>
+                                    <span class="text-gray-300">•</span>
+                                    <p
+                                        class="text-xs px-2 py-0.5 rounded-full bg-white text-gray-700"
+                                        x-text="rec.category || 'Uncategorized'"
+                                    ></p>
+                                </div>
+                                <h4 class="text-md font-semibold text-gray-900" x-text="rec.name || 'Untitled'"></h4>
+                                <p class="text-sm text-gray-700 mt-1" x-text="rec.description"></p>
+                            </div>
+                            <div class="text-right">
+                                <p
+                                    class="text-lg font-bold text-green-900"
+                                    x-text="formatAmount(rec.amount, rec.family?.currency || defaultCurrency)"
+                                ></p>
+                                <div class="flex gap-2 mt-2 justify-end">
+                                    <button @click="goToRecord(rec)" class="text-green-900 hover:text-green-700 text-sm">Open</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Activity by category -->
+            <div class="bg-white rounded-2xl p-5 border border-gray-100">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">Spending by category</h3>
+                <template x-for="[cat, amt] in Object.entries(categoryTotals)" :key="cat">
+                    <div class="flex items-center justify-between py-2">
+                        <div class="flex items-center gap-3">
+                            <div class="w-2 h-8 bg-green-200 rounded-full"></div>
+                            <div>
+                                <p class="text-sm text-gray-700" x-text="cat"></p>
+                                <p class="text-xs text-gray-500" x-text="'Records: ' + (categoryCounts[cat] || 0)"></p>
+                            </div>
+                        </div>
+                        <div class="text-sm font-semibold text-gray-800" x-text="formatAmount(amt, defaultCurrency)"></div>
+                    </div>
+                </template>
+                <template x-if="Object.keys(categoryTotals).length === 0">
+                    <p class="text-sm text-gray-500">No data</p>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div
+        x-show="showModal"
+        x-cloak
+        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        @click.self="closeEdit()"
+    >
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Edit Profile</h2>
+            <form @submit.prevent="saveProfile()">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Name</label>
+                    <input
+                        type="text"
+                        x-model="user.name"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
+                    />
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                    <input
+                        type="email"
+                        x-model="user.email"
+                        class="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none"
+                    />
+                </div>
+                <div class="flex gap-3 mt-6">
+                    <button
+                        type="button"
+                        @click="closeEdit()"
+                        class="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-semibold text-gray-700"
+                    >
+                        Cancel
+                    </button>
+                    <button type="submit" class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+    [x-cloak] {
+        display: none !important;
+    }
+</style>
+
+<script>
+    window.active_page = "profile";
+
+    // Reuse endpoints from records page; ensure record_collection_api & family_collection_api are defined
+    window.endpoints = window.endpoints || {};
+    window.endpoints.list = window.endpoints.list || "{% url 'record_collection_api' %}";
+    window.endpoints.families = window.endpoints.families || "{% url 'family_collection_api' %}";
+
+    function getCSRFToken() {
+        const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : "";
+    }
+
+    function ProfileProvider() {
+        return {
+            loading: false,
+            user: { name: "{{ user.username }}", email: "{{ user.email }}" },
+            families: [],
+            records: [],
+            recent: [],
+            totalSpent: 0,
+            defaultCurrency: "HKD",
+            categoryTotals: {},
+            categoryCounts: {},
+            showModal: false,
+
+            get userInitials() {
+                const n = (this.user.name || "").trim();
+                if (!n) return "U";
+                return n
+                    .split(" ")
+                    .map((s) => s[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase();
+            },
+
+            async init() {
+                this.loading = true;
+                await Promise.all([this.loadFamilies(), this.loadRecords()]);
+                this.computeStats();
+                this.loading = false;
+            },
+
+            async loadFamilies() {
+                try {
+                    const res = await fetch(window.endpoints.families, {
+                        method: "GET",
+                        headers: { Accept: "application/json" },
+                        credentials: "same-origin",
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    this.families = data.families || [];
+                    if (this.families[0]?.currency) this.defaultCurrency = this.families[0].currency;
+                } catch (e) {
+                    console.error("Failed loading families", e);
+                }
+            },
+
+            async logout() {
+                try {
+                    const res = await fetch("{% url 'logout' %}", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-CSRFToken": getCSRFToken(),
+                        },
+                        credentials: "same-origin",
+                    });
+                    if (res.ok) {
+                        window.location.href = "{% url 'auth' %}";
+                    } else {
+                        console.error("Logout failed");
+                    }
+                } catch (e) {
+                    console.error("Error during logout", e);
+                }
+            },
+
+            async loadRecords() {
+                try {
+                    const res = await fetch(window.endpoints.list, {
+                        method: "GET",
+                        headers: { Accept: "application/json" },
+                        credentials: "same-origin",
+                    });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const list = (data.records || []).map((r, idx) => ({ ...r, _key: r.id ?? r.pid ?? idx }));
+                    this.records = list;
+                    this.recent = list.slice(0, 5);
+                } catch (e) {
+                    console.error("Failed loading records", e);
+                }
+            },
+
+            computeStats() {
+                this.totalSpent = 0;
+                this.categoryTotals = {};
+                this.categoryCounts = {};
+                for (const r of this.records) {
+                    const amt = Number(r.amount || 0);
+                    this.totalSpent += amt;
+                    const c = r.category || "other";
+                    this.categoryTotals[c] = (this.categoryTotals[c] || 0) + amt;
+                    this.categoryCounts[c] = (this.categoryCounts[c] || 0) + 1;
+                }
+            },
+
+            formatAmount(amount, cur) {
+                const a = Number(amount || 0).toFixed(2);
+                return `${cur || this.defaultCurrency} ${a}`;
+            },
+
+            openEdit() {
+                this.showModal = true;
+            },
+            closeEdit() {
+                this.showModal = false;
+            },
+
+            saveProfile() {
+                // Local-only save UI. Hook to backend if you have a profile endpoint.
+                this.showModal = false;
+                // Optionally send to backend if endpoint exists:
+                // fetch('/api/profile/', { method: 'PUT', headers: {...}, body: JSON.stringify(this.user) })
+            },
+
+            goToRecord(rec) {
+                // try to navigate to the same detail route used by records page
+                const id = rec.id ?? rec.pid ?? rec._key;
+                if (rec.id != null) {
+                    // attempt to use a detail URL if your app exposes one; fallback to records list
+                    const u = window.endpoints.detailById ? window.endpoints.detailById(rec.id) : null;
+                    if (u) {
+                        window.location = u;
+                        return;
+                    }
+                }
+                // fallback: go to records listing
+                window.location = "";
+            },
+        };
+    }
+</script>
+
+{% endblock %}

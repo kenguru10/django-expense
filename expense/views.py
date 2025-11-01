@@ -53,10 +53,10 @@ def _serialize_account(account: Account):
     except Exception as e:
         return {"error": f"Failed to serialize account: {str(e)}"}
     
-
 def _serialize_record(record: Record):
     try:
         return {
+            "id": getattr(record, 'id', None),  # <-- Add this line
             "pid": getattr(record, 'pid', None),
             "family": _serialize_family(getattr(record, 'family', None)),
             "name": getattr(record, 'name', None),
@@ -68,7 +68,7 @@ def _serialize_record(record: Record):
         }
     except Exception as e:
         return {"error": f"Failed to serialize record: {str(e)}"}
-
+    
 def get_or_create_account(user: User) -> Account:
     account = Account.objects.filter(user=user).first()
     
@@ -321,7 +321,7 @@ def family_remove_member_api(request, family_id: int, member_id: int):
 @login_required(login_url=reverse_lazy("auth"))
 @require_http_methods(["GET", "POST"])
 def record_collection_api(request):
-    # Body: { "family_id": family_id, "amount": amount, "category": category, "description": description }
+    # Body: { "family_id": family_id, "amount": amount, "category": category, "description": description, "created_at": created_at }
 
     if request.method == "GET":
         records = (
@@ -331,7 +331,7 @@ def record_collection_api(request):
         )
         data = [_serialize_record(r) for r in records]
         return JsonResponse({"records": data}, status=200)
-    
+
     try:
         if request.content_type and "application/json" in request.content_type:
             payload = json.loads(request.body or "{}")
@@ -339,7 +339,66 @@ def record_collection_api(request):
             payload = request.POST
     except json.JSONDecodeError:
         return HttpResponseBadRequest("Invalid JSON payload.")
-    
+
+    # Handle PUT for updating a record
+    if request.method == "PUT":
+        record_id = None
+        # Try to get record id from URL (if using Django REST, you may have kwargs)
+        # Here, try to get from payload
+        record_id = payload.get("id")
+        record_pid = payload.get("pid")
+        record = None
+        if record_id:
+            record = Record.objects.filter(id=record_id, family__members=request.user).first()
+        elif record_pid:
+            record = Record.objects.filter(pid=record_pid, family__members=request.user).first()
+        if not record:
+            return JsonResponse({"detail": "Record not found or access denied."}, status=404)
+
+        name = payload.get("name", None)
+        amount = payload.get("amount", None)
+        category = payload.get("category", None)
+        description = payload.get("description", None)
+        created_at = payload.get("created_at", None)
+
+        changed = False
+        if name is not None:
+            record.name = name
+            changed = True
+        if amount is not None:
+            try:
+                record.amount = float(amount)
+                changed = True
+            except ValueError:
+                return HttpResponseBadRequest("Field 'amount' must be a number.")
+        if category is not None:
+            record.category = category
+            changed = True
+        if description is not None:
+            record.description = description
+            changed = True
+        if created_at is not None:
+            # Expecting format 'YYYY-MM-DDTHH:MM' or ISO string
+            try:
+                from django.utils.dateparse import parse_datetime
+                dt = parse_datetime(created_at)
+                if not dt:
+                    # Try without seconds
+                    import datetime as dtmod
+                    try:
+                        dt = dtmod.datetime.strptime(created_at, "%Y-%m-%dT%H:%M")
+                    except Exception:
+                        return HttpResponseBadRequest("Field 'created_at' format invalid.")
+                record.created_at = dt
+                changed = True
+            except Exception:
+                return HttpResponseBadRequest("Field 'created_at' format invalid.")
+
+        if changed:
+            record.save()
+        return JsonResponse(_serialize_record(record), status=200)
+
+    # POST: create new record
     family_id = payload.get("family_id", None)
     name = payload.get("name", None)
     amount = payload.get("amount", None)
@@ -353,10 +412,10 @@ def record_collection_api(request):
         return HttpResponseBadRequest("Field 'amount' is required.")
     if not category:
         return HttpResponseBadRequest("Field 'category' is required.")
-    
+
     try:
         with transaction.atomic():
-            record = Record.objects.create(
+            record = Record(
                 family=Family.objects.get(id=family_id),
                 name=name,
                 amount=amount,
@@ -364,6 +423,17 @@ def record_collection_api(request):
                 description=description,
                 who=request.user,
             )
+            if created_at:
+                from django.utils.dateparse import parse_datetime
+                dt = parse_datetime(created_at)
+                if not dt:
+                    import datetime as dtmod
+                    try:
+                        dt = dtmod.datetime.strptime(created_at, "%Y-%m-%dT%H:%M")
+                    except Exception:
+                        return HttpResponseBadRequest("Field 'created_at' format invalid.")
+                record.created_at = dt
+            record.save()
         return JsonResponse(_serialize_record(record), status=201)
     except Exception as e:
         return JsonResponse({"detail": str(e)}, status=400)
@@ -508,3 +578,65 @@ def infer_category_from_text(text: str) -> str:
             return category
     
     return "other"
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["GET", "PUT", "DELETE"])
+def record_detail_api(request, record_id: int):
+    try:
+        record = Record.objects.select_related("family").get(id=record_id, family__members=request.user)
+    except Record.DoesNotExist:
+        return JsonResponse({"detail": "Record not found or access denied."}, status=404)
+
+    if request.method == "GET":
+        return JsonResponse(_serialize_record(record), status=200)
+
+    if request.method == "PUT":
+        try:
+            if request.content_type and "application/json" in request.content_type:
+                payload = json.loads(request.body or "{}")
+            else:
+                payload = request.POST
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON payload.")
+
+        name = payload.get("name", None)
+        amount = payload.get("amount", None)
+        category = payload.get("category", None)
+        description = payload.get("description", None)
+        created_at = payload.get("created_at", None)
+
+        changed = False
+        if name is not None:
+            record.name = name
+            changed = True
+        if amount is not None:
+            try:
+                record.amount = float(amount)
+                changed = True
+            except ValueError:
+                return HttpResponseBadRequest("Field 'amount' must be a number.")
+        if category is not None:
+            record.category = category
+            changed = True
+        if description is not None:
+            record.description = description
+            changed = True
+        if created_at is not None:
+            from django.utils.dateparse import parse_datetime
+            dt = parse_datetime(created_at)
+            if not dt:
+                import datetime as dtmod
+                try:
+                    dt = dtmod.datetime.strptime(created_at, "%Y-%m-%dT%H:%M")
+                except Exception:
+                    return HttpResponseBadRequest("Field 'created_at' format invalid.")
+            record.created_at = dt
+            changed = True
+
+        if changed:
+            record.save()
+        return JsonResponse(_serialize_record(record), status=200)
+
+    if request.method == "DELETE":
+        record.delete()
+        return JsonResponse({"detail": "Record deleted."}, status=204)

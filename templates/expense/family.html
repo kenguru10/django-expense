@@ -8,7 +8,10 @@
     <!-- Header Section -->
     <div class="flex items-center justify-between mb-6">
         <h1 class="text-2xl font-bold text-gray-900">My Families</h1>
-        <button @click="openCreateModal()" class="bg-green-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-800 transition">
+        <button
+            @click="openCreateModal()"
+            class="bg-green-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-800 transition"
+        >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
             </svg>
@@ -76,10 +79,12 @@
                     </div>
 
                     <div class="space-y-2">
-                        <template x-for="member in family.members" :key="member.id">
+                        <template x-for="member in family?.members" :key="member.email">
                             <div class="bg-white rounded-xl p-3 flex items-center justify-between">
                                 <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-green-900 flex items-center justify-center text-white font-semibold">
+                                    <div
+                                        class="w-10 h-10 rounded-full bg-green-900 flex items-center justify-center text-white font-semibold"
+                                    >
                                         <span x-text="member.name.charAt(0).toUpperCase()"></span>
                                     </div>
                                     <div>
@@ -203,7 +208,10 @@
                     >
                         Cancel
                     </button>
-                    <button type="submit" class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition">
+                    <button
+                        type="submit"
+                        class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition"
+                    >
                         <span x-text="editingFamily ? 'Update' : 'Create'"></span>
                     </button>
                 </div>
@@ -242,7 +250,10 @@
                     >
                         Cancel
                     </button>
-                    <button type="submit" class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition">
+                    <button
+                        type="submit"
+                        class="flex-1 px-4 py-3 bg-green-900 text-white rounded-xl font-semibold hover:bg-green-800 transition"
+                    >
                         Add
                     </button>
                 </div>
@@ -265,8 +276,8 @@
         list: "{% url 'family_collection_api' %}",
         detail: (id) => "{% url 'family_detail_api' family_id=0 %}".replace("/0/", `/${id}/`),
         addMember: (id) => "{% url 'family_add_member_api' family_id=0 %}".replace("/0/", `/${id}/`),
-        removeMember: (id, memberId) => "{% url 'family_remove_member_api' family_id=0 member_id=0 %}"
-            .replace("/0/members/0/", `/${id}/members/${memberId}/`),
+        removeMember: (id, memberId) =>
+            "{% url 'family_remove_member_api' family_id=0 member_id=0 %}".replace("/0/members/0/", `/${id}/members/${memberId}/`),
     };
 
     // CSRF helper
@@ -299,7 +310,7 @@
             async loadFamilies() {
                 const res = await fetch(window.endpoints.list, {
                     method: "GET",
-                    headers: { "Accept": "application/json" },
+                    headers: { Accept: "application/json" },
                     credentials: "same-origin",
                 });
                 if (!res.ok) {
@@ -346,7 +357,7 @@
                     method,
                     headers: {
                         "Content-Type": "application/json",
-                        "Accept": "application/json",
+                        Accept: "application/json",
                         "X-CSRFToken": getCSRFToken(),
                     },
                     credentials: "same-origin",
@@ -367,7 +378,7 @@
                 const updated = await res.json();
                 if (isEdit) {
                     // Replace the item in-place
-                    const idx = this.families.findIndex(f => f.id === updated.id);
+                    const idx = this.families.findIndex((f) => f.id === updated.id);
                     if (idx >= 0) this.families.splice(idx, 1, updated);
                 } else {
                     this.families.push(updated);
@@ -400,7 +411,7 @@
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "Accept": "application/json",
+                        Accept: "application/json",
                         "X-CSRFToken": getCSRFToken(),
                     },
                     credentials: "same-origin",
@@ -416,7 +427,7 @@
                 const updated = await res.json();
                 // Update the selected family and the list
                 this.selectedFamily.members = updated.members;
-                const idx = this.families.findIndex(f => f.id === updated.id);
+                const idx = this.families.findIndex((f) => f.id === updated.id);
                 if (idx >= 0) this.families.splice(idx, 1, updated);
 
                 this.closeMemberModal();
@@ -428,7 +439,7 @@
                 const res = await fetch(window.endpoints.removeMember(familyId, memberId), {
                     method: "DELETE",
                     headers: {
-                        "Accept": "application/json",
+                        Accept: "application/json",
                         "X-CSRFToken": getCSRFToken(),
                     },
                     credentials: "same-origin",
@@ -441,7 +452,7 @@
                 }
 
                 const updated = await res.json();
-                const idx = this.families.findIndex(f => f.id === updated.id);
+                const idx = this.families.findIndex((f) => f.id === updated.id);
                 if (idx >= 0) this.families.splice(idx, 1, updated);
             },
         };

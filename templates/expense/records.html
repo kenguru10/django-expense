@@ -30,7 +30,7 @@
         <div class="mb-4">
             <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-gray-500">This month</p>
+                    <p class="text-sm text-gray-500" x-text="`This month (${new Date().getMonth() + 1})`"></p>
                     <p class="text-lg font-bold text-gray-700" x-text="formatCurrency(thisMonthSpent, defaultCurrency)">HKD 0.00</p>
                 </div>
                 <div class="text-sm text-gray-600">&nbsp;</div>
@@ -49,7 +49,7 @@
                             <p class="text-xs px-2 py-0.5 rounded-full bg-white text-gray-700" x-text="rec.category || 'Uncategorized'"></p>
                         </div>
                         <h3 class="text-lg font-semibold text-gray-900" x-text="rec.name || 'Untitled'"></h3>
-                        <p class="text-sm text-gray-700 mt-1" x-text="rec.who?.name || 'Unknown'"></p>
+                        <p class="text-sm text-gray-700 mt-1" x-text="`${rec.who?.name} (${formatDate(rec.created_at)})`"></p>
                         <p class="text-sm text-gray-700 mt-1" x-text="rec.description"></p>
                     </div>
                     <div class="text-right">
@@ -240,7 +240,6 @@
                         const key = r.id ?? r.pid ?? idx;
                         return { ...r, _key: key };
                     });
-                    console.log(list);
                     this.records = list;
                     this.computeThisMonthSpent();
                 } finally {
@@ -299,6 +298,13 @@
                 const cur = rec.family?.currency || "HKD";
                 const amt = Number(rec.amount || 0).toFixed(2);
                 return `${cur} ${amt}`;
+            },
+
+            formatDate(timestamp) {
+                if (!timestamp) return "Unknown date";
+                const d = new Date(timestamp); // assuming timestamp in seconds
+                if (isNaN(d.getTime())) return "Invalid date";
+                return d.toLocaleDateString();
             },
 
             openEdit(rec) {

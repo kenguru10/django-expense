@@ -64,6 +64,7 @@ def _serialize_record(record: Record):
             "category": getattr(record, 'category', None),
             "description": getattr(record, 'description', None),
             "who": _serialize_member(getattr(record, 'who', None)),
+            "created_at": getattr(record, 'created_at', None),
         }
     except Exception as e:
         return {"error": f"Failed to serialize record: {str(e)}"}
@@ -114,7 +115,8 @@ def auth_view(request):
                 messages.error(request, "Invalid username or password.")
         elif "register" in request.POST:
             tab = "register"
-            name = request.POST.get("name")
+            full_name = request.POST.get("full_name")
+            username = request.POST.get("username")
             email = request.POST.get("email")
             password = request.POST.get("password")
             confirm = request.POST.get("confirm")
@@ -124,7 +126,7 @@ def auth_view(request):
                 messages.error(request, "Email already registered.")
             else:
                 user = User.objects.create_user(
-                    username=email, email=email, password=password, first_name=name
+                    username=username, email=email, password=password, first_name=full_name
                 )
                 login(request, user)
                 return redirect("home")

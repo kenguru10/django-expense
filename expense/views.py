@@ -461,6 +461,7 @@ def extract_total_from_text(text: str) -> float:
         r'grand[:\s]+total[:\s]+([0-9]+\.?[0-9]*)',
         r'amount[:\s]+due[:\s]+([0-9]+\.?[0-9]*)',
         r'balance[:\s]+([0-9]+\.?[0-9]*)',
+        r'HKD[:\s]+([0-9]+\.?[0-9]*)',
         r'\$([0-9]+\.?[0-9]*)\s*$',  # Dollar amount at end of line
     ]
     

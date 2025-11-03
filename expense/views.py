@@ -404,6 +404,8 @@ def record_collection_api(request):
     amount = payload.get("amount", None)
     category = payload.get("category", None)
     description = payload.get("description", None)
+    created_at = payload.get("created_at", None)
+
     if not family_id:
         return HttpResponseBadRequest("Field 'family_id' is required.")
     if not name:

@@ -21,66 +21,75 @@ from .models import Account, Family, Record
 def _serialize_member(user):
     try:
         return {
-            "name": f"{getattr(user, 'first_name', '')}".strip() or (getattr(user, 'username', None) or getattr(user, 'email', None)),
-            "email": getattr(user, 'email', None) or getattr(user, 'username', None),
+            "name": f"{getattr(user, 'first_name', '')}".strip()
+            or (getattr(user, "username", None) or getattr(user, "email", None)),
+            "email": getattr(user, "email", None) or getattr(user, "username", None),
         }
     except Exception as e:
         return {"error": f"Failed to serialize member: {str(e)}"}
 
+
 def _serialize_family(family: Family):
     try:
         return {
-            "id": getattr(family, 'id', None),
-            "pid": getattr(family, 'pid', None),
-            "name": getattr(family, 'name', None),
-            "level": getattr(family, 'level', None),
-            "max_budget": getattr(family, 'max_budget', None),
-            "currency": getattr(family, 'currency', None),
-            "members": [_serialize_member(u) for u in getattr(family, 'members', []).all()] if hasattr(getattr(family, 'members', None), 'all') else [],
+            "id": getattr(family, "id", None),
+            "pid": getattr(family, "pid", None),
+            "name": getattr(family, "name", None),
+            "level": getattr(family, "level", None),
+            "max_budget": getattr(family, "max_budget", None),
+            "currency": getattr(family, "currency", None),
+            "members": (
+                [_serialize_member(u) for u in getattr(family, "members", []).all()]
+                if hasattr(getattr(family, "members", None), "all")
+                else []
+            ),
         }
     except Exception as e:
         return {"error": f"Failed to serialize family: {str(e)}"}
-    
+
+
 def _serialize_account(account: Account):
     try:
         return {
-            "pid": getattr(account, 'pid', None),
-            "user": _serialize_member(getattr(account, 'user', None)),
-            "expired_at": getattr(account, 'expired_at', None),
-            "created_at": getattr(account, 'created_at', None),
-            "updated_at": getattr(account, 'updated_at', None),
+            "pid": getattr(account, "pid", None),
+            "user": _serialize_member(getattr(account, "user", None)),
+            "expired_at": getattr(account, "expired_at", None),
+            "created_at": getattr(account, "created_at", None),
+            "updated_at": getattr(account, "updated_at", None),
         }
     except Exception as e:
         return {"error": f"Failed to serialize account: {str(e)}"}
-    
+
+
 def _serialize_record(record: Record):
     try:
         return {
-            "id": getattr(record, 'id', None),  # <-- Add this line
-            "pid": getattr(record, 'pid', None),
-            "family": _serialize_family(getattr(record, 'family', None)),
-            "name": getattr(record, 'name', None),
-            "amount": getattr(record, 'amount', None),
-            "category": getattr(record, 'category', None),
-            "description": getattr(record, 'description', None),
-            "who": _serialize_member(getattr(record, 'who', None)),
-            "created_at": getattr(record, 'created_at', None),
+            "id": getattr(record, "id", None),  # <-- Add this line
+            "pid": getattr(record, "pid", None),
+            "family": _serialize_family(getattr(record, "family", None)),
+            "name": getattr(record, "name", None),
+            "amount": getattr(record, "amount", None),
+            "category": getattr(record, "category", None),
+            "description": getattr(record, "description", None),
+            "who": _serialize_member(getattr(record, "who", None)),
+            "created_at": getattr(record, "created_at", None),
         }
     except Exception as e:
         return {"error": f"Failed to serialize record: {str(e)}"}
-    
+
+
 def get_or_create_account(user: User) -> Account:
     account = Account.objects.filter(user=user).first()
-    
+
     with transaction.atomic():
         if not account:
             account = Account.objects.create(
-                user=user,
-                expired_at=datetime.now() + timedelta(days=365)
+                user=user, expired_at=datetime.now() + timedelta(days=365)
             )
         account.refresh_from_db()
-        
+
     return account
+
 
 # Create your views here.
 @login_required(login_url=reverse_lazy("auth"))
@@ -94,11 +103,38 @@ def home_view(request):
     summary = {
         "total_amount_this_month": 0,
     }
-    records = Record.objects.filter(family=family, created_at__month=datetime.now().month)
+    records = Record.objects.filter(
+        family=family, created_at__month=datetime.now().month
+    )
     for record in records:
         summary["total_amount_this_month"] += record.amount
-        
-    return render(request, "expense/home.html", {"family": _serialize_family(family), "account": _serialize_account(account), "summary": summary})
+
+    # Aggregate spending per member
+    member_spending = (
+        Record.objects.filter(family=family, created_at__month=datetime.now().month)
+        .values("who__first_name", "who__username", "who__email")
+        .annotate(total=Sum("amount"))
+    )
+    # Prepare for chart: labels and data
+    chart_labels = []
+    chart_data = []
+    for m in member_spending:
+        name = m["who__first_name"] or m["who__username"] or m["who__email"]
+        chart_labels.append(name)
+        chart_data.append(m["total"] or 0)
+
+    return render(
+        request,
+        "expense/home.html",
+        {
+            "family": _serialize_family(family),
+            "account": _serialize_account(account),
+            "summary": summary,
+            "chart_labels": chart_labels,
+            "chart_data": chart_data,
+        },
+    )
+
 
 def auth_view(request):
     tab = "login"
@@ -126,7 +162,10 @@ def auth_view(request):
                 messages.error(request, "Email already registered.")
             else:
                 user = User.objects.create_user(
-                    username=username, email=email, password=password, first_name=full_name
+                    username=username,
+                    email=email,
+                    password=password,
+                    first_name=full_name,
                 )
                 login(request, user)
                 return redirect("home")
@@ -136,20 +175,26 @@ def auth_view(request):
 def family_view(request):
     return render(request, "expense/family.html")
 
+
 def add_view(request):
     return render(request, "expense/add.html")
+
 
 def records_view(request):
     return render(request, "expense/records.html")
 
+
 def profile_view(request):
     return render(request, "expense/profile.html")
+
 
 def logout_view(request):
     logout(request)
     return redirect("auth")
 
+
 # API endpoints
+
 
 @login_required(login_url=reverse_lazy("auth"))
 @require_http_methods(["GET", "POST"])
@@ -318,6 +363,7 @@ def family_remove_member_api(request, family_id: int, member_id: int):
     family.refresh_from_db()
     return JsonResponse(_serialize_family(family), status=200)
 
+
 @login_required(login_url=reverse_lazy("auth"))
 @require_http_methods(["GET", "POST"])
 def record_collection_api(request):
@@ -326,7 +372,7 @@ def record_collection_api(request):
     if request.method == "GET":
         records = (
             Record.objects.filter(family__members=request.user)
-            .select_related("family") 
+            .select_related("family")
             .order_by("-created_at")
         )
         data = [_serialize_record(r) for r in records]
@@ -349,11 +395,17 @@ def record_collection_api(request):
         record_pid = payload.get("pid")
         record = None
         if record_id:
-            record = Record.objects.filter(id=record_id, family__members=request.user).first()
+            record = Record.objects.filter(
+                id=record_id, family__members=request.user
+            ).first()
         elif record_pid:
-            record = Record.objects.filter(pid=record_pid, family__members=request.user).first()
+            record = Record.objects.filter(
+                pid=record_pid, family__members=request.user
+            ).first()
         if not record:
-            return JsonResponse({"detail": "Record not found or access denied."}, status=404)
+            return JsonResponse(
+                {"detail": "Record not found or access denied."}, status=404
+            )
 
         name = payload.get("name", None)
         amount = payload.get("amount", None)
@@ -381,14 +433,18 @@ def record_collection_api(request):
             # Expecting format 'YYYY-MM-DDTHH:MM' or ISO string
             try:
                 from django.utils.dateparse import parse_datetime
+
                 dt = parse_datetime(created_at)
                 if not dt:
                     # Try without seconds
                     import datetime as dtmod
+
                     try:
                         dt = dtmod.datetime.strptime(created_at, "%Y-%m-%dT%H:%M")
                     except Exception:
-                        return HttpResponseBadRequest("Field 'created_at' format invalid.")
+                        return HttpResponseBadRequest(
+                            "Field 'created_at' format invalid."
+                        )
                 record.created_at = dt
                 changed = True
             except Exception:
@@ -427,13 +483,17 @@ def record_collection_api(request):
             )
             if created_at:
                 from django.utils.dateparse import parse_datetime
+
                 dt = parse_datetime(created_at)
                 if not dt:
                     import datetime as dtmod
+
                     try:
                         dt = dtmod.datetime.strptime(created_at, "%Y-%m-%dT%H:%M")
                     except Exception:
-                        return HttpResponseBadRequest("Field 'created_at' format invalid.")
+                        return HttpResponseBadRequest(
+                            "Field 'created_at' format invalid."
+                        )
                 record.created_at = dt
             record.save()
         return JsonResponse(_serialize_record(record), status=201)
@@ -455,11 +515,11 @@ def record_scan_api(request):
             payload = request.POST
     except json.JSONDecodeError:
         return HttpResponseBadRequest("Invalid JSON payload.")
-    
+
     image_data_url = payload.get("image", "").strip()
     if not image_data_url:
         return HttpResponseBadRequest("Field 'image' is required.")
-    
+
     # Extract base64 data
     try:
         # Remove data URL prefix if present
@@ -467,60 +527,69 @@ def record_scan_api(request):
             header, base64_data = image_data_url.split(",", 1)
         else:
             base64_data = image_data_url
-        
+
         # Decode base64 to image
         image_bytes = base64.b64decode(base64_data)
         image = Image.open(io.BytesIO(image_bytes))
-        
+
         # Convert to RGB if necessary (for JPEG compatibility)
         if image.mode != "RGB":
             image = image.convert("RGB")
-        
+
         # Resize if too large (OCR works better with reasonable sizes)
         max_size = 2000
         if image.width > max_size or image.height > max_size:
             ratio = min(max_size / image.width, max_size / image.height)
             new_size = (int(image.width * ratio), int(image.height * ratio))
             image = image.resize(new_size, Image.Resampling.LANCZOS)
-        
+
     except Exception as e:
         return JsonResponse({"detail": f"Invalid image data: {str(e)}"}, status=400)
-    
+
     # Perform OCR
     try:
         import pytesseract
-        
+
         # Extract text from image
         text = pytesseract.image_to_string(image)
-        
+
         # Try to extract total amount
         amount = extract_total_from_text(text)
-        
+
         # Try to infer category from text (basic keyword matching)
         category = infer_category_from_text(text)
-        
+
         # Use first few lines as description
         lines = text.strip().split("\n")
         description = "\n".join(lines[:3])
-        
-        return JsonResponse({
-            "amount": amount,
-            "category": category,
-            "description": description,
-            "raw_text": text  # Include for debugging
-        }, status=200)
-        
+
+        return JsonResponse(
+            {
+                "amount": amount,
+                "category": category,
+                "description": description,
+                "raw_text": text,  # Include for debugging
+            },
+            status=200,
+        )
+
     except ImportError:
-        return JsonResponse({
-            "detail": "OCR library (pytesseract) not installed. Please install it or provide fallback."
-        }, status=503)
+        return JsonResponse(
+            {
+                "detail": "OCR library (pytesseract) not installed. Please install it or provide fallback."
+            },
+            status=503,
+        )
     except Exception as e:
-        return JsonResponse({
-            "detail": f"OCR processing failed: {str(e)}",
-            "amount": None,
-            "category": None,
-            "description": None
-        }, status=500)
+        return JsonResponse(
+            {
+                "detail": f"OCR processing failed: {str(e)}",
+                "amount": None,
+                "category": None,
+                "description": None,
+            },
+            status=500,
+        )
 
 
 def extract_total_from_text(text: str) -> float:
@@ -529,16 +598,16 @@ def extract_total_from_text(text: str) -> float:
     """
     # Common patterns for total amount
     patterns = [
-        r'total[:\s]+([0-9]+\.?[0-9]*)',
-        r'grand[:\s]+total[:\s]+([0-9]+\.?[0-9]*)',
-        r'amount[:\s]+due[:\s]+([0-9]+\.?[0-9]*)',
-        r'balance[:\s]+([0-9]+\.?[0-9]*)',
-        r'HKD[:\s]+([0-9]+\.?[0-9]*)',
-        r'\$([0-9]+\.?[0-9]*)\s*$',  # Dollar amount at end of line
+        r"total[:\s]+([0-9]+\.?[0-9]*)",
+        r"grand[:\s]+total[:\s]+([0-9]+\.?[0-9]*)",
+        r"amount[:\s]+due[:\s]+([0-9]+\.?[0-9]*)",
+        r"balance[:\s]+([0-9]+\.?[0-9]*)",
+        r"HKD[:\s]+([0-9]+\.?[0-9]*)",
+        r"\$([0-9]+\.?[0-9]*)\s*$",  # Dollar amount at end of line
     ]
-    
+
     lines = text.split("\n")
-    
+
     # Search from bottom to top (total usually at bottom)
     for line in reversed(lines):
         for pattern in patterns:
@@ -548,15 +617,15 @@ def extract_total_from_text(text: str) -> float:
                     return float(match.group(1))
                 except ValueError:
                     continue
-    
+
     # Fallback: look for any large number (likely total)
-    numbers = re.findall(r'([0-9]+\.[0-9]{2})', text)
+    numbers = re.findall(r"([0-9]+\.[0-9]{2})", text)
     if numbers:
         try:
             return max(float(n) for n in numbers)
         except (ValueError, ValueError):
             pass
-    
+
     return 0.0
 
 
@@ -565,29 +634,53 @@ def infer_category_from_text(text: str) -> str:
     Try to infer expense category from text keywords
     """
     text_lower = text.lower()
-    
+
     category_keywords = {
-        "food": ["restaurant", "food", "mcdonald", "kfc", "burger", "pizza", "cafe", "dining", "meal"],
-        "transport": ["taxi", "uber", "metro", "bus", "train", "subway", "parking", "fuel"],
+        "food": [
+            "restaurant",
+            "food",
+            "mcdonald",
+            "kfc",
+            "burger",
+            "pizza",
+            "cafe",
+            "dining",
+            "meal",
+        ],
+        "transport": [
+            "taxi",
+            "uber",
+            "metro",
+            "bus",
+            "train",
+            "subway",
+            "parking",
+            "fuel",
+        ],
         "shopping": ["store", "market", "shopping", "retail", "supermarket"],
         "health": ["pharmacy", "drug", "medicine", "hospital", "clinic"],
         "utilities": ["electric", "water", "gas", "internet", "phone"],
         "entertainment": ["cinema", "movie", "theater", "entertainment"],
     }
-    
+
     for category, keywords in category_keywords.items():
         if any(keyword in text_lower for keyword in keywords):
             return category
-    
+
     return "other"
+
 
 @login_required(login_url=reverse_lazy("auth"))
 @require_http_methods(["GET", "PUT", "DELETE"])
 def record_detail_api(request, record_id: int):
     try:
-        record = Record.objects.select_related("family").get(id=record_id, family__members=request.user)
+        record = Record.objects.select_related("family").get(
+            id=record_id, family__members=request.user
+        )
     except Record.DoesNotExist:
-        return JsonResponse({"detail": "Record not found or access denied."}, status=404)
+        return JsonResponse(
+            {"detail": "Record not found or access denied."}, status=404
+        )
 
     if request.method == "GET":
         return JsonResponse(_serialize_record(record), status=200)
@@ -625,9 +718,11 @@ def record_detail_api(request, record_id: int):
             changed = True
         if created_at is not None:
             from django.utils.dateparse import parse_datetime
+
             dt = parse_datetime(created_at)
             if not dt:
                 import datetime as dtmod
+
                 try:
                     dt = dtmod.datetime.strptime(created_at, "%Y-%m-%dT%H:%M")
                 except Exception:

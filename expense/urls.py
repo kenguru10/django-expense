@@ -26,7 +26,5 @@ urlpatterns = [
     ),
     path("records/", views.record_collection_api, name="record_collection_api"),
     path('api/records/<int:record_id>/', views.record_detail_api, name='record_detail_api'),
-    path(
-        "records/scan/", views.record_scan_api, name="record_scan_api"  # Add this line
-    ),
+    path("qrcodes/upload/", views.qrcode_upload_view, name="qrcode_upload"),
 ]

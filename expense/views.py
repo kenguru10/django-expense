@@ -11,12 +11,8 @@ from django.db.models import Sum
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse, HttpResponseBadRequest
 import json
-import base64
-import re
-from PIL import Image
-import io
 
-from .models import Account, Family, Record
+from .models import Account, Family, Record, QRCode
 
 
 def _serialize_member(user):
@@ -110,6 +106,12 @@ def home_view(request):
     for record in records:
         summary["total_amount_this_month"] += record.amount
 
+    # QR codes for this family
+    if family is not None:
+        qrcodes = QRCode.objects.filter(family=family).order_by("-created_at")
+    else:
+        qrcodes = []
+
     # Aggregate spending per member
     member_spending = (
         Record.objects.filter(family=family, created_at__month=datetime.now().month)
@@ -133,6 +135,7 @@ def home_view(request):
             "summary": summary,
             "chart_labels": chart_labels,
             "chart_data": chart_data,
+            "qrcodes": qrcodes,
         },
     )
 
@@ -187,6 +190,35 @@ def records_view(request):
 
 def profile_view(request):
     return render(request, "expense/profile.html")
+
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["POST"])
+def qrcode_upload_view(request):
+    """Upload one or more QR code images for the current user's family."""
+    try:
+        family = Family.objects.prefetch_related("members").get(members=request.user)
+    except Family.DoesNotExist:
+        messages.error(request, "Create or join a family before uploading QR codes.")
+        return redirect("home")
+
+    files = request.FILES.getlist("qrcodes")
+    if not files:
+        messages.error(request, "Please select at least one image to upload.")
+        return redirect("home")
+
+    created_any = False
+    for file in files:
+        if getattr(file, "content_type", "").startswith("image/"):
+            QRCode.objects.create(family=family, image=file)
+            created_any = True
+
+    if created_any:
+        messages.success(request, "QR codes uploaded successfully.")
+    else:
+        messages.error(request, "No valid image files were uploaded.")
+
+    return redirect("home")
 
 
 def logout_view(request):
@@ -501,174 +533,6 @@ def record_collection_api(request):
     except Exception as e:
         return JsonResponse({"detail": str(e)}, status=400)
 
-
-@login_required(login_url=reverse_lazy("auth"))
-@require_http_methods(["POST"])
-def record_scan_api(request):
-    """
-    Receives a base64 image, performs OCR, and returns parsed receipt data
-    Body: { "image": "data:image/jpeg;base64,..." }
-    """
-    try:
-        if request.content_type and "application/json" in request.content_type:
-            payload = json.loads(request.body or "{}")
-        else:
-            payload = request.POST
-    except json.JSONDecodeError:
-        return HttpResponseBadRequest("Invalid JSON payload.")
-
-    image_data_url = payload.get("image", "").strip()
-    if not image_data_url:
-        return HttpResponseBadRequest("Field 'image' is required.")
-
-    # Extract base64 data
-    try:
-        # Remove data URL prefix if present
-        if image_data_url.startswith("data:image"):
-            header, base64_data = image_data_url.split(",", 1)
-        else:
-            base64_data = image_data_url
-
-        # Decode base64 to image
-        image_bytes = base64.b64decode(base64_data)
-        image = Image.open(io.BytesIO(image_bytes))
-
-        # Convert to RGB if necessary (for JPEG compatibility)
-        if image.mode != "RGB":
-            image = image.convert("RGB")
-
-        # Resize if too large (OCR works better with reasonable sizes)
-        max_size = 2000
-        if image.width > max_size or image.height > max_size:
-            ratio = min(max_size / image.width, max_size / image.height)
-            new_size = (int(image.width * ratio), int(image.height * ratio))
-            image = image.resize(new_size, Image.Resampling.LANCZOS)
-
-    except Exception as e:
-        return JsonResponse({"detail": f"Invalid image data: {str(e)}"}, status=400)
-
-    # Perform OCR
-    try:
-        import pytesseract
-
-        # Extract text from image
-        text = pytesseract.image_to_string(image)
-
-        # Try to extract total amount
-        amount = extract_total_from_text(text)
-
-        # Try to infer category from text (basic keyword matching)
-        category = infer_category_from_text(text)
-
-        # Use first few lines as description
-        lines = text.strip().split("\n")
-        description = "\n".join(lines[:3])
-
-        return JsonResponse(
-            {
-                "amount": amount,
-                "category": category,
-                "description": description,
-                "raw_text": text,  # Include for debugging
-            },
-            status=200,
-        )
-
-    except ImportError:
-        return JsonResponse(
-            {
-                "detail": "OCR library (pytesseract) not installed. Please install it or provide fallback."
-            },
-            status=503,
-        )
-    except Exception as e:
-        return JsonResponse(
-            {
-                "detail": f"OCR processing failed: {str(e)}",
-                "amount": None,
-                "category": None,
-                "description": None,
-            },
-            status=500,
-        )
-
-
-def extract_total_from_text(text: str) -> float:
-    """
-    Extract total amount from OCR text by looking for common patterns
-    """
-    # Common patterns for total amount
-    patterns = [
-        r"total[:\s]+([0-9]+\.?[0-9]*)",
-        r"grand[:\s]+total[:\s]+([0-9]+\.?[0-9]*)",
-        r"amount[:\s]+due[:\s]+([0-9]+\.?[0-9]*)",
-        r"balance[:\s]+([0-9]+\.?[0-9]*)",
-        r"HKD[:\s]+([0-9]+\.?[0-9]*)",
-        r"\$([0-9]+\.?[0-9]*)\s*$",  # Dollar amount at end of line
-    ]
-
-    lines = text.split("\n")
-
-    # Search from bottom to top (total usually at bottom)
-    for line in reversed(lines):
-        for pattern in patterns:
-            match = re.search(pattern, line.lower())
-            if match:
-                try:
-                    return float(match.group(1))
-                except ValueError:
-                    continue
-
-    # Fallback: look for any large number (likely total)
-    numbers = re.findall(r"([0-9]+\.[0-9]{2})", text)
-    if numbers:
-        try:
-            return max(float(n) for n in numbers)
-        except (ValueError, ValueError):
-            pass
-
-    return 0.0
-
-
-def infer_category_from_text(text: str) -> str:
-    """
-    Try to infer expense category from text keywords
-    """
-    text_lower = text.lower()
-
-    category_keywords = {
-        "food": [
-            "restaurant",
-            "food",
-            "mcdonald",
-            "kfc",
-            "burger",
-            "pizza",
-            "cafe",
-            "dining",
-            "meal",
-        ],
-        "transport": [
-            "taxi",
-            "uber",
-            "metro",
-            "bus",
-            "train",
-            "subway",
-            "parking",
-            "fuel",
-        ],
-        "shopping": ["store", "market", "shopping", "retail", "supermarket"],
-        "health": ["pharmacy", "drug", "medicine", "hospital", "clinic"],
-        "utilities": ["electric", "water", "gas", "internet", "phone"],
-        "entertainment": ["cinema", "movie", "theater", "entertainment"],
-    }
-
-    for category, keywords in category_keywords.items():
-        if any(keyword in text_lower for keyword in keywords):
-            return category
-
-    return "other"
 
 
 @login_required(login_url=reverse_lazy("auth"))

@@ -106,7 +106,7 @@
                 </div>
             </div>
             <!-- Chart Section -->
-            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 mb-20">
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-sm font-semibold text-gray-900">Overview Spending</h3>
                     <button class="text-xs text-gray-600">More Details</button>
@@ -114,6 +114,49 @@
                 <div class="flex items-center justify-center h-40">
                     <!-- Placeholder for chart -->
                     <canvas id="memberSpendingChart" width="350" height="140"></canvas>
+                </div>
+            </div>
+
+            <!-- QR Codes Section -->
+            <div class="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 mb-20">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-sm font-semibold text-gray-900">Payment QR Codes</h3>
+                </div>
+
+                <form action="{% url 'qrcode_upload' %}" method="post" enctype="multipart/form-data" class="mb-4 space-y-3">
+                    {% csrf_token %}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Upload QR Code Images</label>
+                        <input
+                            type="file"
+                            name="qrcodes"
+                            accept="image/*"
+                            multiple
+                            class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500 p-3"
+                        />
+                        <p class="mt-1 text-xs text-gray-500">You can select and upload multiple QR code images.</p>
+                    </div>
+                    <button
+                        type="submit"
+                        class="inline-flex items-center px-4 py-2 bg-green-900 text-white text-sm font-semibold rounded-full hover:bg-green-800 transition"
+                    >
+                        Upload
+                    </button>
+                </form>
+
+                <div class="mt-2">
+                    {% if qrcodes %}
+                        <div class="grid grid-cols-3 gap-4">
+                            {% for qr in qrcodes %}
+                                <div class="bg-gray-50 rounded-xl p-3 flex flex-col items-center">
+                                    <img src="{{ qr.image.url }}" alt="QR Code" class="w-24 h-24 object-contain" />
+                                    <p class="mt-2 text-[10px] text-gray-500">{{ qr.created_at|date:"Y-m-d H:i" }}</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-sm text-gray-500">No QR codes uploaded yet. Use the form above to add one.</p>
+                    {% endif %}
                 </div>
             </div>
         </div>

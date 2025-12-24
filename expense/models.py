@@ -105,3 +105,13 @@ class Record(models.Model):
         if not self.pid:
             self.generate_pid()
         super().save(*args, **kwargs)
+
+
+class QRCode(models.Model):
+    id = models.AutoField(primary_key=True)
+    family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="qrcodes")
+    image = models.ImageField(upload_to="qrcodes/")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"QR for {self.family.name} ({self.id})"

@@ -27,4 +27,5 @@ urlpatterns = [
     path("records/", views.record_collection_api, name="record_collection_api"),
     path('api/records/<int:record_id>/', views.record_detail_api, name='record_detail_api'),
     path("qrcodes/upload/", views.qrcode_upload_view, name="qrcode_upload"),
+    path("qrcodes/<int:qrcode_id>/delete/", views.qrcode_delete_view, name="qrcode_delete"),
 ]

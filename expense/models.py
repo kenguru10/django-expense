@@ -110,8 +110,9 @@ class Record(models.Model):
 class QRCode(models.Model):
     id = models.AutoField(primary_key=True)
     family = models.ForeignKey(Family, on_delete=models.CASCADE, related_name="qrcodes")
+    name = models.CharField(max_length=100, blank=True)
     image = models.ImageField(upload_to="qrcodes/")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"QR for {self.family.name} ({self.id})"
+        return self.name or f"QR for {self.family.name} ({self.id})"

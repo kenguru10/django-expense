@@ -203,6 +203,7 @@ def qrcode_upload_view(request):
         return redirect("home")
 
     files = request.FILES.getlist("qrcodes")
+    name = (request.POST.get("name") or "").strip()
     if not files:
         messages.error(request, "Please select at least one image to upload.")
         return redirect("home")
@@ -210,7 +211,7 @@ def qrcode_upload_view(request):
     created_any = False
     for file in files:
         if getattr(file, "content_type", "").startswith("image/"):
-            QRCode.objects.create(family=family, image=file)
+            QRCode.objects.create(family=family, image=file, name=name)
             created_any = True
 
     if created_any:
@@ -218,6 +219,29 @@ def qrcode_upload_view(request):
     else:
         messages.error(request, "No valid image files were uploaded.")
 
+    return redirect("home")
+
+
+@login_required(login_url=reverse_lazy("auth"))
+@require_http_methods(["POST"])
+def qrcode_delete_view(request, qrcode_id: int):
+    """Delete a QR code image if it belongs to a family the user is in."""
+    try:
+        qr = QRCode.objects.select_related("family").get(id=qrcode_id)
+    except QRCode.DoesNotExist:
+        messages.error(request, "QR code not found.")
+        return redirect("home")
+
+    if not qr.family.members.filter(id=request.user.id).exists():
+        messages.error(request, "You are not allowed to delete this QR code.")
+        return redirect("home")
+
+    # Optionally delete the underlying file as well
+    if qr.image:
+        qr.image.delete(save=False)
+
+    qr.delete()
+    messages.success(request, "QR code removed.")
     return redirect("home")
 
 
